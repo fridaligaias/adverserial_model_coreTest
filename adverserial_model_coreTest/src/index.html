@@ -1,13 +1,31 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Parcel Vanilla App</title>
-    <link rel="stylesheet" href="style.css">
-  </head>
-  <body>
-    <h1>Parcel Vanilla App</h1>
-    <p>Edit <code>src/index.html</code> to get started!</p>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <title>Adversarial Image Test</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+
+  <h1>Adversarial Image Protection Test</h1>
+
+  <button id="selectBtn">
+    Select image to apply adversarial layer
+  </button>
+
+  <div id="gallery" hidden></div>
+
+  <button id="submitBtn" disabled>
+    Apply adversarial layer
+  </button>
+
+  <h2>Output</h2>
+  <canvas id="outputCanvas" width="224" height="224"></canvas>
+
+
+  <br><br>
+  <a id="downloadLink" href="#" hidden download="adversarial.png">Download image</a>
+
+  <script type="module" src="./app.js"></script>
+</body>
 </html>

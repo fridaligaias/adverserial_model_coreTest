@@ -1,8 +1,24 @@
-html {
-  color-scheme: light dark;
-  font-family: system-ui;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
+body {
+  font-family: sans-serif;
+  padding: 20px;
+}
+
+#gallery {
+  margin-top: 20px;
+}
+
+#gallery img {
+  width: 150px;
+  margin: 10px;
+  cursor: pointer;
+  border: 3px solid transparent;
+}
+
+#gallery img.selected {
+  border-color: red;
+}
+
+canvas {
+  margin-top: 20px;
+  border: 1px solid black;
 }
