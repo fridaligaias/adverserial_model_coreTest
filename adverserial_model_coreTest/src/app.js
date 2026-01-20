@@ -1,4 +1,8 @@
 // app.js
+// og image -> model inference -> adversarial attack -> 
+// adversarial image -> model inference -> deceptive result + download link
+
+
 import * as tf from "@tensorflow/tfjs";
 import * as mobilenet from "@tensorflow-models/mobilenet";
 import { applyAdversarial } from "./adversarial";
