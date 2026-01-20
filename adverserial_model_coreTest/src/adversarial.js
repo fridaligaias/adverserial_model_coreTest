@@ -1,7 +1,7 @@
 // adversarial.js
 import * as tf from "@tensorflow/tfjs";
 
-// Added 'onProgress' callback
+
 export async function applyAdversarial(modelWrapper, imgTensor, onProgress) {
   const model = modelWrapper.model;
   const epsilon = 0.01;

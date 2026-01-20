@@ -15,7 +15,7 @@ const downloadLink = document.getElementById("downloadLink");
 let selectedImage = null;
 let model = null;
 
-const images = [
+const images = [ 
   { name: "cat108.jpg", src: new URL("./assets/gallery/cat108.jpg", import.meta.url).href },
   { name: "dog.png",    src: new URL("./assets/gallery/dog.png", import.meta.url).href },
   { name: "woman1.jpg", src: new URL("./assets/gallery/woman1.jpg", import.meta.url).href },
@@ -25,12 +25,13 @@ const images = [
 // Load MobileNetV2
 async function loadModel() {
   console.log("Loading MobileNetV2 model...");
-  // We wait for the model to load before enabling interaction
+  // wait for the model to load before enabling interaction
   model = await mobilenet.load({ version: 2, alpha: 1.0 });
   console.log("Model loaded");
   selectBtn.disabled = false; // Enable button only after model loads
   selectBtn.textContent = "Select Image";
 }
+
 
 selectBtn.onclick = () => {
   gallery.hidden = false;
@@ -42,7 +43,7 @@ images.forEach(image => {
   img.alt = image.name;
   img.width = 150;
   img.height = 150;
-  img.crossOrigin = "anonymous"; // Important for canvas security!
+  img.crossOrigin = "anonymous"; 
 
   img.onclick = () => {
     document.querySelectorAll("#gallery img").forEach(i => i.classList.remove("selected"));
@@ -54,7 +55,7 @@ images.forEach(image => {
   gallery.appendChild(img);
 });
 
-// Step 3: Submit button click
+// submit button click
 submitBtn.onclick = async () => {
   if (!selectedImage) return;
 
@@ -64,10 +65,12 @@ submitBtn.onclick = async () => {
   progressBar.style.width = "0%";
   progressContainer.style.display = "block";
   
-  // Wait a tick so the UI updates
+  
+  // wait, UI updates
   setTimeout(async () => {
     console.log(`Processing: ${selectedImage.alt}`);
-    // 1. Create Tensor and RESIZE to 224x224 (Required by MobileNet)
+    // create Tensor and RESIZE to 224x224 (required by MobileNet)
+
     const originalTensor = tf.browser.fromPixels(selectedImage)
       .resizeBilinear([224, 224]) // <--- The Critical Fix
       .toFloat()
@@ -75,7 +78,7 @@ submitBtn.onclick = async () => {
       .expandDims();
     // Pass the callback function to update the bar
 
-    // 2. Run Adversarial Attack;
+    // Run attack;
     const advTensor = await applyAdversarial(model, originalTensor, (percent) => {
         console.log(`Attack Progress: ${percent}%`);
         progressBar.style.width = `${percent}%`;
@@ -83,13 +86,17 @@ submitBtn.onclick = async () => {
 
     await tf.browser.toPixels(advTensor.squeeze(), canvas);
 
-    // 4. Offer Download
+    const confidenceDrop =
+        Math.max(0, before.probability - after.probability) * 100;
+    
+
+    //  Download choice
     downloadLink.href = canvas.toDataURL();
-    downloadLink.download = `adversarial_${selectedImage.alt}.png`;
+    downloadLink.download = `adversarial_${selectedImage.alt}`;
     downloadLink.hidden = false;
     downloadLink.textContent = "Download Adversarial Image";
     
-    // Hide progress bar when done
+    //hide progress bar when done
     progressContainer.style.display = "none";
     submitBtn.textContent = "Run Attack";
     submitBtn.disabled = false;
