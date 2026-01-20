@@ -3,6 +3,9 @@ import * as tf from "@tensorflow/tfjs";
 import * as mobilenet from "@tensorflow-models/mobilenet";
 import { applyAdversarial } from "./adversarial";
 
+const progressContainer = document.getElementById("progressContainer");
+const progressBar = document.getElementById("progressBar");
+
 const selectBtn = document.getElementById("selectBtn");
 const submitBtn = document.getElementById("submitBtn");
 const gallery = document.getElementById("gallery");
@@ -58,22 +61,26 @@ submitBtn.onclick = async () => {
   submitBtn.textContent = "Processing...";
   submitBtn.disabled = true;
 
+  progressBar.style.width = "0%";
+  progressContainer.style.display = "block";
+  
   // Wait a tick so the UI updates
   setTimeout(async () => {
     console.log(`Processing: ${selectedImage.alt}`);
-
     // 1. Create Tensor and RESIZE to 224x224 (Required by MobileNet)
     const originalTensor = tf.browser.fromPixels(selectedImage)
       .resizeBilinear([224, 224]) // <--- The Critical Fix
       .toFloat()
       .div(255)
       .expandDims();
+    // Pass the callback function to update the bar
 
-    // 2. Run Adversarial Attack
-    const advTensor = await applyAdversarial(model, originalTensor);
+    // 2. Run Adversarial Attack;
+    const advTensor = await applyAdversarial(model, originalTensor, (percent) => {
+        console.log(`Attack Progress: ${percent}%`);
+        progressBar.style.width = `${percent}%`;
+        });
 
-    // 3. Render to Canvas
-    // We squeeze() to remove the batch dimension [1, 224, 224, 3] -> [224, 224, 3]
     await tf.browser.toPixels(advTensor.squeeze(), canvas);
 
     // 4. Offer Download
@@ -81,6 +88,11 @@ submitBtn.onclick = async () => {
     downloadLink.download = `adversarial_${selectedImage.alt}.png`;
     downloadLink.hidden = false;
     downloadLink.textContent = "Download Adversarial Image";
+    
+    // Hide progress bar when done
+    progressContainer.style.display = "none";
+    submitBtn.textContent = "Run Attack";
+    submitBtn.disabled = false;
 
     // Clean up memory
     originalTensor.dispose();
