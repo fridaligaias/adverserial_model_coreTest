@@ -16,6 +16,13 @@ const gallery = document.getElementById("gallery");
 const canvas = document.getElementById("outputCanvas");
 const downloadLink = document.getElementById("downloadLink");
 
+// Create a container for results if it doesn't exist
+const resultsContainer = document.createElement("div");
+resultsContainer.id = "results";
+resultsContainer.style.marginTop = "20px";
+resultsContainer.style.fontFamily = "monospace";
+document.body.appendChild(resultsContainer);
+
 let selectedImage = null;
 let model = null;
 
@@ -29,13 +36,11 @@ const images = [
 // Load MobileNetV2
 async function loadModel() {
   console.log("Loading MobileNetV2 model...");
-  // wait for the model to load before enabling interaction
   model = await mobilenet.load({ version: 2, alpha: 1.0 });
   console.log("Model loaded");
-  selectBtn.disabled = false; // Enable button only after model loads
+  selectBtn.disabled = false;
   selectBtn.textContent = "Select Image";
 }
-
 
 selectBtn.onclick = () => {
   gallery.hidden = false;
@@ -54,67 +59,102 @@ images.forEach(image => {
     img.classList.add("selected");
     selectedImage = img;
     submitBtn.disabled = false;
+    resultsContainer.innerHTML = ""; // Clear previous results
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
   };
 
   gallery.appendChild(img);
 });
 
-// submit button click
+// --- MAIN LOGIC HERE ---
 submitBtn.onclick = async () => {
   if (!selectedImage) return;
 
   submitBtn.textContent = "Processing...";
   submitBtn.disabled = true;
-
   progressBar.style.width = "0%";
   progressContainer.style.display = "block";
+  resultsContainer.innerHTML = "Inferencing original image...";
   
-  
-  // wait, UI updates
+  // Use setTimeout to allow UI to render the "Processing" state
   setTimeout(async () => {
-    console.log(`Processing: ${selectedImage.alt}`);
-    // create Tensor and RESIZE to 224x224 (required by MobileNet)
+    try {
+      // 1. Prepare Tensor
+      // Tensor for classification (NO normalisation)
+      const classifyTensor = tf.browser.fromPixels(selectedImage)
+        .resizeBilinear([224, 224])
+        .toFloat()
+        .expandDims();
 
-    const originalTensor = tf.browser.fromPixels(selectedImage)
-      .resizeBilinear([224, 224]) // <--- The Critical Fix
-      .toFloat()
-      .div(255)
-      .expandDims();
-    // Pass the callback function to update the bar
+      // Tensor for attack (normalised)
+      const attackTensor = classifyTensor.div(255);
+      // 2. INFERENCE (Original)
+      const originalPreds = await model.classify(classifyTensor);
+      const before = originalPreds[0];      
+      console.log("Original Prediction:", before);
 
-    // Run attack;
-    const advTensor = await applyAdversarial(model, originalTensor, (percent) => {
-        console.log(`Attack Progress: ${percent}%`);
+      // 3. RUN ATTACK (BIM)
+      // No UI predictions inside this loop, just the progress bar callback
+      const advTensor = await applyAdversarial(model, attackTensor, (percent) => {
         progressBar.style.width = `${percent}%`;
-        });
+      });
 
-    await tf.browser.toPixels(advTensor.squeeze(), canvas);
+      // 4. INFERENCE (Adversarial)
+      // Denormalize back to 0-255 range for classification
+      const advTensorDenorm = advTensor.mul(255);
+      const advPreds = await model.classify(advTensorDenorm);
+      const after = advPreds[0];
+      console.log("Adversarial Prediction:", after);
 
-    const confidenceDrop =
-        Math.max(0, before.probability - after.probability) * 100;
-    
+      // 5. RENDER RESULT
+      await tf.browser.toPixels(advTensor.squeeze(), canvas);
 
-    //  Download choice
-    downloadLink.href = canvas.toDataURL();
-    downloadLink.download = `adversarial_${selectedImage.alt}`;
-    downloadLink.hidden = false;
-    downloadLink.textContent = "Download Adversarial Image";
-    
-    //hide progress bar when done
-    progressContainer.style.display = "none";
-    submitBtn.textContent = "Run Attack";
-    submitBtn.disabled = false;
+      // 6. CALCULATE METRICS
+      
+      // Calculate Confidence Drop:
+      // We want: (Prob of Original Class in OLD image) - (Prob of Original Class in NEW image)
+      // Note: 'after' is the top class of the new image. If the class flipped, 
+      // we need to hunt for the original class name in the 'advPreds' array.
+      const originalClassInNewPreds = advPreds.find(p => p.className === before.className);
+      const newProbOfOriginalClass = originalClassInNewPreds ? originalClassInNewPreds.probability : 0;
+      
+      const confidenceDrop = Math.max(0, before.probability - newProbOfOriginalClass) * 100;
+      const isClassFlip = before.className !== after.className;
 
-    // Clean up memory
-    originalTensor.dispose();
-    advTensor.dispose();
-    
-    submitBtn.textContent = "Run Attack";
-    submitBtn.disabled = false;
+      // 7. DISPLAY METRICS
+      resultsContainer.innerHTML = `
+        <h3>Deception Metrics</h3>
+        <p><strong>Original:</strong> ${before.className} (${(before.probability * 100).toFixed(2)}%)</p>
+        <p><strong>Adversarial:</strong> ${after.className} (${(after.probability * 100).toFixed(2)}%)</p>
+        <hr>
+        <p><strong>Class Flip:</strong> ${isClassFlip ? "✅ YES" : "❌ NO"}</p>
+        <p><strong>Confidence Drop:</strong> ${confidenceDrop.toFixed(2)}%</p>
+      `;
+
+      // 8. DOWNLOAD SETUP
+      downloadLink.href = canvas.toDataURL();
+      downloadLink.download = `adversarial_${selectedImage.alt}`;
+      downloadLink.hidden = false;
+      downloadLink.textContent = "Download Adversarial Image";
+
+      // Cleanup
+      classifyTensor.dispose();
+      attackTensor.dispose();
+      advTensor.dispose();
+      advTensorDenorm.dispose(); // Don't forget this!
+
+    } catch (err) {
+      console.error(err);
+      resultsContainer.innerHTML = `<p style="color:red">Error: ${err.message}</p>`;
+    } finally {
+      progressContainer.style.display = "none";
+      submitBtn.textContent = "Run Attack";
+      submitBtn.disabled = false;
+    }
   }, 100);
 };
 
 // Start
 selectBtn.disabled = true;
 selectBtn.textContent = "Loading Model...";
-loadModel();
+loadModel(); 
