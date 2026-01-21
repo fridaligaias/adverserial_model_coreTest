@@ -1,4 +1,4 @@
-// app.js
+// app.js - npx parcel src/index.html
 // og image -> model inference -> adversarial attack -> 
 // adversarial image -> model inference -> deceptive result + download link
 
@@ -89,9 +89,6 @@ submitBtn.onclick = async () => {
         });
 
     await tf.browser.toPixels(advTensor.squeeze(), canvas);
-
-    const confidenceDrop =
-        Math.max(0, before.probability - after.probability) * 100;
     
 
     //  Download choice
