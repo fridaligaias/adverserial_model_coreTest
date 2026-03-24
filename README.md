@@ -1,5 +1,7 @@
 # 🛡️ Adversarial Image Perturbation Core
-### Client-Side Adversarial AI Project | **womyn.network** Code Snippet
+### Client-Side Adversarial AI Project | **womyn.network** Code Snippet 
+
+Check out more about the womyn.project project [here](https://sites.google.com/view/womyn/home).
 
 [![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/)
 [![TensorFlow.js](https://img.shields.io/badge/TensorFlow.js-Client--Side-FF6F00?style=for-the-badge&logo=tensorflow&logoColor=white)](https://www.tensorflow.org/js)
